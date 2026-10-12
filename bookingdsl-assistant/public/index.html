@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BookingDSL Assistant</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="app">
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-mark">B</div>
+      <div>
+        <h1 class="brand-title">BookingDSL Assistant</h1>
+        <p class="brand-sub">LLM-assisted domain-specific modelling language generation</p>
+      </div>
+    </div>
+    <div class="header-meta">
+      <span class="pill" id="model-pill">claude-sonnet-5</span>
+      <button class="btn btn-ghost" id="btn-reset">Reset</button>
+    </div>
+  </header>
+
+  <!-- ═══ PHASE STEPPER ═══ -->
+  <nav class="stepper" id="stepper">
+    <div class="stepper-track"></div>
+    <div class="stepper-step active" data-phase="1"><span class="step-dot">1</span><span class="step-label">Concepts</span></div>
+    <div class="stepper-step" data-phase="2"><span class="step-dot">2</span><span class="step-label">Relations</span></div>
+    <div class="stepper-step" data-phase="3"><span class="step-dot">3</span><span class="step-label">Metamodel</span></div>
+    <div class="stepper-step" data-phase="4"><span class="step-dot">4</span><span class="step-label">Syntax</span></div>
+    <div class="stepper-step" data-phase="5"><span class="step-dot">5</span><span class="step-label">Examples</span></div>
+    <div class="stepper-step" data-phase="6"><span class="step-dot">6</span><span class="step-label">Constraints</span></div>
+    <div class="stepper-step" data-phase="7"><span class="step-dot">7</span><span class="step-label">Traceability</span></div>
+  </nav>
+
+  <main class="main">
+
+    <!-- ═══ INPUT SCREEN ═══ -->
+    <section class="card" id="screen-input">
+      <div class="card-head">
+        <h2 class="card-title">Describe your domain</h2>
+        <p class="card-sub">Enter a natural-language description of the domain to model. Full prose works best, but the workflow is also robust to keyword-style input — try both.</p>
+      </div>
+
+      <div class="example-row">
+        <label class="field-label">Load an example</label>
+        <div class="example-buttons" id="example-buttons"></div>
+      </div>
+
+      <label class="field-label" for="domain-input">Domain description</label>
+      <textarea
+        id="domain-input"
+        class="textarea"
+        rows="8"
+        placeholder="e.g. A hotel booking system where guests reserve rooms for a specific date range..."></textarea>
+
+      <div class="card-actions">
+        <button class="btn btn-primary" id="btn-start">
+          Start workflow
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="hint-inline">Tip: press Ctrl + Enter to start</span>
+      </div>
+    </section>
+
+    <!-- ═══ PHASE SCREEN ═══ -->
+    <section class="card hidden" id="screen-phase">
+
+      <!-- Persistent domain summary -->
+      <details class="domain-summary" id="domain-summary">
+        <summary>
+          <span class="summary-label">Domain</span>
+          <span class="summary-preview" id="domain-preview"></span>
+          <span class="summary-toggle">Show / hide</span>
+        </summary>
+        <div class="summary-body" id="domain-body"></div>
+      </details>
+
+      <!-- Phase header -->
+      <div class="phase-head">
+        <div>
+          <div class="phase-meta">
+            <span class="phase-badge" id="phase-badge">Phase 1 of 7</span>
+            <span class="depends-chip" id="depends-chip" hidden></span>
+            <span class="timing-chip" id="timing-chip" hidden></span>
+          </div>
+          <h2 class="phase-title" id="phase-title">Concept extraction</h2>
+        </div>
+        <div class="phase-actions">
+          <button class="btn btn-ghost btn-sm" id="btn-regenerate" hidden title="Re-run this phase (output differs due to LLM non-determinism)">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M12.5 3.5A6 6 0 1 0 14 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14 2v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Regenerate
+          </button>
+          <button class="btn btn-ghost btn-sm" id="btn-edit" hidden>Edit</button>
+          <button class="btn btn-ghost btn-sm" id="btn-copy" hidden>Copy</button>
+          <button class="btn btn-ghost btn-sm" id="btn-download" hidden>Download</button>
+        </div>
+      </div>
+
+      <!-- Explanation card -->
+      <div class="info-card">
+        <div class="info-icon">i</div>
+        <div class="info-body">
+          <p><strong>What this phase does:</strong> <span id="expl-what"></span></p>
+          <p><strong>What it produces:</strong> <span id="expl-produces"></span></p>
+          <p><strong>How to read the output:</strong> <span id="expl-read"></span></p>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" id="tabs" role="tablist">
+        <button class="tab active" data-tab="output" role="tab">Output</button>
+        <button class="tab" data-tab="prompt" role="tab">Prompt sent to LLM</button>
+      </div>
+
+      <!-- Output tab -->
+      <div class="tab-panel" id="tab-output">
+        <div class="scroll-box" id="scroll-output">
+          <div class="markdown-body" id="phase-output"></div>
+          <textarea class="edit-textarea hidden" id="edit-textarea" rows="16"></textarea>
+        </div>
+        <div class="edit-controls hidden" id="edit-controls">
+          <button class="btn btn-primary btn-sm" id="btn-edit-save">Save changes</button>
+          <button class="btn btn-ghost btn-sm" id="btn-edit-cancel">Cancel</button>
+          <span class="hint-inline">Edits become the input to subsequent phases — this is the human-in-the-loop step.</span>
+        </div>
+      </div>
+
+      <!-- Prompt tab -->
+      <div class="tab-panel hidden" id="tab-prompt">
+        <div class="prompt-legend">
+          <span class="legend-swatch legend-instruction"></span> Authored instruction
+          <span class="legend-swatch legend-domain"></span> Domain description
+          <span class="legend-swatch legend-injected"></span> Chained from prior phase
+        </div>
+        <p class="prompt-hint">This is the exact prompt sent to the LLM for this phase. Chained sections carry the verbatim output of prior phases — this is what makes the seven prompts a coordinated workflow rather than independent queries.</p>
+        <div class="scroll-box" id="scroll-prompt">
+          <div class="prompt-view" id="prompt-view"></div>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <div class="phase-nav">
+        <button class="btn btn-ghost" id="btn-prev" disabled>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13 8H3m4-4-4 4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Previous
+        </button>
+        <button class="btn btn-primary" id="btn-next">
+          Next phase
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- ═══ COMPLETION SCREEN ═══ -->
+    <section class="card hidden" id="screen-complete">
+      <div class="complete-mark">✓</div>
+      <h2 class="card-title center">Workflow complete</h2>
+      <p class="card-sub center">All seven phases have been generated for your domain. Export individual artifacts or download the entire set below.</p>
+
+      <div class="export-grid" id="export-grid"></div>
+
+      <div class="complete-actions">
+        <button class="btn btn-primary" id="btn-export-all">Download all artifacts (.txt)</button>
+        <button class="btn btn-ghost" id="btn-review">Review phase output</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Loading overlay -->
+  <div class="loading-overlay hidden" id="loading">
+    <div class="spinner"></div>
+    <p class="loading-text" id="loading-text">Generating phase 1...</p>
+    <p class="loading-sub">The LLM is processing the chained prompt for this phase. This typically takes 5-15 seconds.</p>
+  </div>
+
+  <footer class="site-footer">
+    <span>Bachelor thesis prototype · Riga Technical University · <span id="footer-model">claude-sonnet-5</span></span>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
